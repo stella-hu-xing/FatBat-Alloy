@@ -54,7 +54,7 @@ sig AMS {
 	insurersLocationPermission : insurers  -> one Boolean,
 	//emergency records
 	emergencyRecords : Index -> users ->(BPM - NoVital) -> (GPSLocation-NoLocation)
-
+//	emergencyRecords : Index -> users -> BPM -> GPSLocation
 
 }
 {
@@ -570,27 +570,36 @@ pred ContactEmergency[ams,ams',ams'',ams''' : AMS, wearer : UserID, index : one 
 	GetEmergencyVitalPermission[ams, wearer] = True 
 	one ams.vitals[wearer]
 	one ams.locations[wearer]
+
 	ExternalContactEmergency[wearer, newGPS, newBPM]
 	UpdateVitals [ams, ams', wearer, newBPM]
 	UpdateLocation[ams', ams'', wearer, newGPS]
  	no (index ->UserID->BPM->GPSLocation & ams''.emergencyRecords)
-	ams'''.emergencyRecords = ams''.emergencyRecords ++ (index ->wearer->newBPM->newGPS)
+	ams'''.emergencyRecords = ams''.emergencyRecords +(index ->wearer->newBPM->newGPS)
    //unchange
 	UsersUnchanged[ams'',ams''']
 	DataUnchanged[ams'',ams''']
 	PermissionUnchanged[ams'',ams''']
 
 }
+run ContactEmergency for 6
 
 assert CheckVoidVitalEmergency{
-	all ams,ams1,ams2,ams3,ams4:AMS,wearer:UserID,index1:Index|
-	wearer in ams.users
+	all ams1,ams2,ams3,ams4:AMS,wearer:UserID,index1:Index|
+	wearer in ams1.users&& (ams1.vitals[wearer] != NoVital) && (ams1.locations[wearer] != NoLocation)
 	&&ContactEmergency[ams1,ams2,ams3,ams4,wearer,index1,NoVital,NoLocation]
-	=>index1->wearer->NoVital->NoLocation   in ams4.emergencyRecords
+	=>index1->wearer->NoVital->NoLocation not in ams4.emergencyRecords
 }
 check CheckVoidVitalEmergency for 6
 
-run ContactEmergency for 6
+assert CheckvoidvitalEmergencyAgain{
+	all ams : AMS|
+	some ams.emergencyRecords =>(no ((Index->UserID->NoVital -> NoLocation)& ams.emergencyRecords))
+                                                    && (no ((Index->UserID->NoVital -> GPSLocation)& ams.emergencyRecords))
+                                                   	&& (no ((Index->UserID->BPM -> NoLocation)& ams.emergencyRecords)) 
+}
+
+check CheckvoidvitalEmergencyAgain for 3
 
 pred EmergencyRecordsUnchange[ams,ams' : AMS]{
 	ams.emergencyRecords = ams'.emergencyRecords
