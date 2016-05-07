@@ -8,7 +8,6 @@ Task1:
 
 
 
-
 /** Data types **/
 sig UserID {}
 one sig Emergency extends UserID {} //There is exactly one emergency userID
@@ -54,7 +53,7 @@ sig AMS {
 	insurersLocationPermission : insurers  -> one Boolean,
 	//emergency records
 	emergencyRecords : Index -> users ->(BPM - NoVital) -> (GPSLocation-NoLocation)
-
+//	emergencyRecords : Index -> users ->BPM ->GPSLocation
 
 }
 {
@@ -566,7 +565,7 @@ pred UpdateEmergencyLocationPermission[ams,ams': AMS, userID: UserID, newAllow :
 }
 
 
-pred ContactEmergency[ams,ams',ams'',ams''' : AMS, wearer : UserID, index : one Index, newBPM : BPM, newGPS : GPSLocation]{
+pred ContactEmergency[ams, ams', ams'', ams''' : AMS, wearer : UserID, index : one Index, newBPM : BPM, newGPS : GPSLocation]{
 	GetEmergencyVitalPermission[ams, wearer] = True 
 	one ams.vitals[wearer]
 	one ams.locations[wearer]
@@ -583,14 +582,15 @@ pred ContactEmergency[ams,ams',ams'',ams''' : AMS, wearer : UserID, index : one 
 }
 
 assert CheckVoidVitalEmergency{
-	all ams,ams1,ams2,ams3,ams4:AMS,wearer:UserID,index1:Index|
-	wearer in ams.users
+	all ams1,ams2,ams3,ams4:AMS,wearer:UserID,index1:Index|
+	wearer in ams1.users&& (ams1.vitals[wearer] != NoVital) && (ams1.locations[wearer] != NoLocation)
 	&&ContactEmergency[ams1,ams2,ams3,ams4,wearer,index1,NoVital,NoLocation]
-	=>index1->wearer->NoVital->NoLocation   in ams4.emergencyRecords
+	//=>index1->wearer->NoVital->NoLocation  in ams4.emergencyRecords
 }
+
 check CheckVoidVitalEmergency for 6
 
-run ContactEmergency for 6
+run ContactEmergency for 4 but 7 GPSLocation, 7 BPM
 
 pred EmergencyRecordsUnchange[ams,ams' : AMS]{
 	ams.emergencyRecords = ams'.emergencyRecords
